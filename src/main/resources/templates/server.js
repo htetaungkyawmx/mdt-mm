@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client-dashboard.html'));
+    res.sendFile(path.join(__dirname, 'client.html'));
 });
 
 wss.on('connection', (ws) => {
@@ -35,5 +35,5 @@ wss.on('connection', (ws) => {
 
 const PORT = 8081;
 server.listen(PORT, () => {
-    console.log(`Server is listening on http://localhost:${PORT}`);
+    console.log(`Client is listening on http://localhost:${PORT}`);
 });

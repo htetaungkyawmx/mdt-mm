@@ -82,30 +82,27 @@
 
 <script>
   const fileInput = document.getElementById('csvFile');
-  const serverIpInput = document.getElementById('serverIp');
   const fileCountDiv = document.getElementById('fileCount');
   const transferStatusDiv = document.getElementById('transferStatus');
 
-  const socket = new WebSocket('ws://localhost:8080/socket');
+  const socket = new WebSocket('ws://localhost:8080');
 
-  socket.addEventListener('message', function(event) {
-    const data = event.data;
-    transferStatusDiv.innerHTML += data === "End of CSV" ? `<strong>${data}</strong><br>` : data + '<br>';
+  socket.addEventListener('message', (event) => {
+    transferStatusDiv.innerHTML += `${event.data}<br>`;
     transferStatusDiv.scrollTop = transferStatusDiv.scrollHeight;
   });
 
   document.getElementById('uploadBtn').addEventListener('click', () => {
     const file = fileInput.files[0];
-    const serverIp = serverIpInput.value;
 
-    if (!file || !serverIp) {
-      alert('Please enter the server IP and select a CSV file.');
+    if (!file) {
+      alert('Please select a CSV file.');
       return;
     }
 
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       const lines = e.target.result.split('\n').filter(line => line.trim() !== "");
       fileCountDiv.innerText = `File Count: ${lines.length}`;
 
@@ -123,10 +120,9 @@
 
           index++;
         } else {
-
           clearInterval(intervalId);
-          socket.send("End of CSV");
-          transferStatusDiv.innerText += `<strong>End of CSV</strong><br>`;
+          socket.send("End Of CSV Files");
+          transferStatusDiv.innerHTML += `<strong>End Of CSV Files</strong><br>`;
         }
 
         transferStatusDiv.scrollTop = transferStatusDiv.scrollHeight;
@@ -135,7 +131,6 @@
 
     reader.readAsText(file);
   });
-
 </script>
 </body>
 </html>
