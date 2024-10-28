@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation Client Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    #fileCount, #transferStatus {
+      margin-top: 20px;
+    }
+    #transferStatus {
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 200px;
+      overflow-y: scroll;
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Client Dashboard</h1>
+
+  <div class="form-group">
+    <label for="serverIp">Server IP Address</label>
+    <input type="text" id="serverIp" placeholder="Enter server IP (localhost:xxxx)">
+  </div>
+
+  <div class="form-group">
+    <label for="csvFile">Upload Flight Log CSV File</label>
+    <input type="file" id="csvFile" accept=".csv">
+  </div>
+
+  <button id="uploadBtn">Upload and Start Transfer</button>
+
+  <div id="fileCount"></div>
+  <div id="transferStatus"></div>
+</div>
+
+<script>
+  const fileInput = document.getElementById('csvFile');
+  const serverIpInput = document.getElementById('serverIp');
+  const fileCountDiv = document.getElementById('fileCount');
+  const transferStatusDiv = document.getElementById('transferStatus');
+
+  const socket = new WebSocket('ws://localhost:8080/socket');
+
+  socket.addEventListener('message', function(event) {
+    const data = event.data;
+    transferStatusDiv.innerHTML += data === "End of CSV" ? `<strong>${data}</strong><br>` : data + '<br>';
+    transferStatusDiv.scrollTop = transferStatusDiv.scrollHeight;
+  });
+
+  document.getElementById('uploadBtn').addEventListener('click', () => {
+    const file = fileInput.files[0];
+    const serverIp = serverIpInput.value;
+
+    if (!file || !serverIp) {
+      alert('Please enter the server IP and select a CSV file.');
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      const lines = e.target.result.split('\n').filter(line => line.trim() !== "");
+      fileCountDiv.innerText = `File Count: ${lines.length}`;
+
+      socket.send(`ExpectedCount:${lines.length}`);
+
+      let index = 0;
+
+      const intervalId = setInterval(() => {
+        if (index < lines.length) {
+          const line = lines[index].trim();
+          const xmlData = `<row><data>${line}</data></row>`;
+
+          socket.send(xmlData);
+          transferStatusDiv.innerText += `Sending: ${xmlData}\n[tx] xml\n[rx] response code\n`;
+
+          index++;
+        } else {
+
+          clearInterval(intervalId);
+          socket.send("End of CSV");
+          transferStatusDiv.innerText += `<strong>End of CSV</strong><br>`;
+        }
+
+        transferStatusDiv.scrollTop = transferStatusDiv.scrollHeight;
+      }, 5000);
+    };
+
+    reader.readAsText(file);
+  });
+
+</script>
+</body>
+</html>

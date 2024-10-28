@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation Server Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #fileStatus, #logs, #transferStatus {
+      margin-top: 20px;
+    }
+    #logs, #transferStatus {
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 300px;
+      overflow-y: scroll;
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Server Dashboard</h1>
+
+  <div class="form-group">
+    <label for="serverIp">Server IP Address</label>
+    <input type="text" id="serverIp" placeholder="Enter server IP (localhost:xxxx)">
+  </div>
+
+  <button id="uploadBtn">Disconnected Client</button>
+
+  <div class="form-group">
+    <label>File Status:</label>
+    <div id="fileStatus">Waiting for files...</div>
+  </div>
+
+  <div class="form-group">
+    <label>Transfer Logs:</label>
+    <div id="transferStatus"></div>
+  </div>
+
+  <div class="form-group">
+    <label>Real-Time Logs:</label>
+    <div id="logs"></div>
+  </div>
+
+  <div class="form-group">
+    <button id="downloadBtn">Download Received File</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.2/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script>
+  const transferStatusDiv = document.getElementById('transferStatus');
+  const logsDiv = document.getElementById('logs');
+  const fileStatusDiv = document.getElementById('fileStatus');
+
+  const socket = new SockJS('/server-dashboard');
+  const stompClient = Stomp.over(socket);
+
+  stompClient.connect({}, function (frame) {
+    stompClient.subscribe('/topic/logs', function (message) {
+      logsDiv.innerText += message.body + "\n";
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    });
+  });
+
+  function logMessage(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    logsDiv.innerText += `[${timestamp}] ${message}\n`;
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+  }
+
+  function updateFileStatus(status) {
+    fileStatusDiv.innerText = status;
+  }
+
+  function simulateFileReceive() {
+    logMessage("Server started, waiting for client connection...");
+
+    setTimeout(() => {
+      logMessage("Client connected from localhost");
+      updateFileStatus("Receiving CSV file...");
+      transferStatusDiv.innerText = "";
+
+      let receivedLines = 100;
+
+      const intervalId = setInterval(() => {
+        receivedLines++;
+        const xmlData = `<xml><data>Row ${receivedLines} content</data></xml>`;
+        transferStatusDiv.innerText += `Received: ${xmlData}\n[rx] xml\n[tx] response code: 200\n`;
+
+        logMessage(`Processed row ${receivedLines}`);
+        updateFileStatus(`Processed ${receivedLines} rows`);
+      }, 500);
+    }, 2000);
+  }
+
+  simulateFileReceive();
+
+  document.getElementById('downloadBtn').addEventListener('click', function() {
+    const fileContent = "Simulated received data...\nRow 1 content\nRow 2 content\n...";
+    const blob = new Blob([fileContent], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "receive.txt";
+    link.click();
+  });
+</script>
+
+</body>
+</html>
