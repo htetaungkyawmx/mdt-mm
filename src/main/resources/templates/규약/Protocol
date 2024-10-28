@@ -1,0 +1,2 @@
+client dashboard = localhost:8081 (Node Express JS)
+server dashboard = localhost:8080 (Spring Boot)
