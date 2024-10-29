@@ -66,12 +66,10 @@
   <h1>Server Dashboard</h1>
 
   <div class="form-group">
-    <label for="serverIp">Server IP Address</label>
-    <input type="text" id="serverIp" placeholder="Enter Client IP (localhost:xxxx)">
-
+    <label for="clientIp">Client IP Address</label>
+    <input type="text" id="clientIp" placeholder="Enter Client IP (e.g., ws://localhost:8081)">
   </div>
-
-  <button id="uploadBtn">Disconnected Client</button>
+  <button id="connectBtn">Connect</button>
 
   <div class="form-group">
     <label>File Status:</label>
@@ -89,26 +87,17 @@
   </div>
 
   <div class="form-group">
-    <button id="downloadBtn">Download Received File</button>
+    <button id="downloadBtn" disabled>Download Received File</button>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.2/sockjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script>
   const transferStatusDiv = document.getElementById('transferStatus');
   const logsDiv = document.getElementById('logs');
   const fileStatusDiv = document.getElementById('fileStatus');
-
-  const socket = new SockJS('/server-dashboard');
-  const stompClient = Stomp.over(socket);
-
-  stompClient.connect({}, function (frame) {
-    stompClient.subscribe('/topic/logs', function (message) {
-      logsDiv.innerText += message.body + "\n";
-      logsDiv.scrollTop = logsDiv.scrollHeight;
-    });
-  });
+  const connectBtn = document.getElementById('connectBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  let socket;
 
   function logMessage(message) {
     const timestamp = new Date().toLocaleTimeString();
@@ -116,40 +105,60 @@
     logsDiv.scrollTop = logsDiv.scrollHeight;
   }
 
-  function updateFileStatus(status) {
-    fileStatusDiv.innerText = status;
+  function connectToClient() {
+    const clientIp = document.getElementById('clientIp').value.trim();
+
+    if (!clientIp) {
+      alert("Please enter a valid Client IP.");
+      return;
+    }
+
+    socket = new WebSocket(clientIp);
+
+    socket.addEventListener('open', () => {
+      logMessage("Connected to the server WebSocket.");
+      fileStatusDiv.innerText = "Connected to client, waiting for data...";
+      downloadBtn.disabled = false;
+    });
+
+    socket.addEventListener('message', (event) => {
+      const message = event.data;
+
+      transferStatusDiv.innerHTML += `Sending: ${message}\n[tx] csv\n[rx] response code\n`;
+      transferStatusDiv.scrollTop = transferStatusDiv.scrollHeight;
+
+      if (message.includes("End Of CSV")) {
+        fileStatusDiv.innerText = "Data received and saved to file.";
+      } else {
+        fileStatusDiv.innerText = "Receiving data...";
+      }
+
+      logMessage(message);
+    });
+
+    socket.addEventListener('close', () => {
+      logMessage("Disconnected from the server WebSocket.");
+      fileStatusDiv.innerText = "Connection closed.";
+      downloadBtn.disabled = true;
+    });
+
+    socket.addEventListener('error', () => {
+      logMessage("Error connecting to WebSocket. Please check the IP and try again.");
+      fileStatusDiv.innerText = "Error: Could not connect.";
+    });
   }
 
-  function simulateFileReceive() {
-    logMessage("Server started, waiting for client connection...");
+  connectBtn.addEventListener('click', connectToClient);
 
-    setTimeout(() => {
-      logMessage("Client connected from localhost");
-      updateFileStatus("Receiving CSV file...");
-      transferStatusDiv.innerText = "";
-
-      let receivedLines = 0;
-
-      const intervalId = setInterval(() => {
-        receivedLines++;
-        const xmlData = `<xml><data>Row ${receivedLines} content</data></xml>`;
-        transferStatusDiv.innerText += `Received: ${xmlData}\n[rx] xml\n[tx] response code: 200\n`;
-
-        logMessage(`Processed row ${receivedLines}`);
-        updateFileStatus(`Processed ${receivedLines} rows`);
-      }, 5000);
-    }, 2000);
-  }
-
-  simulateFileReceive();
-
-  document.getElementById('downloadBtn').addEventListener('click', function() {
-    const fileContent = "Simulated received data...\nRow 1 content\nRow 2 content\n...";
-    const blob = new Blob([fileContent], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "receive.txt";
-    link.click();
+  downloadBtn.addEventListener('click', () => {
+    fetch('/received_data.txt')
+            .then(response => response.blob())
+            .then(blob => {
+              const link = document.createElement("a");
+              link.href = URL.createObjectURL(blob);
+              link.download = "received_data.txt";
+              link.click();
+            });
   });
 </script>
 

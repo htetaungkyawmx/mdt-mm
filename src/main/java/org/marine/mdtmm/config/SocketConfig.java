@@ -25,7 +25,7 @@ public class SocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Bean
-    public SocketHandler sockertHandler(SimpMessagingTemplate messagingTemplate) {
+    public SocketHandler socketHandler(SimpMessagingTemplate messagingTemplate) {
         return new SocketHandler(messagingTemplate);
     }
 }

@@ -61,6 +61,7 @@
   </style>
 </head>
 <body>
+
 <div class="container">
   <h1>Client Dashboard</h1>
 
@@ -85,7 +86,7 @@
   const fileCountDiv = document.getElementById('fileCount');
   const transferStatusDiv = document.getElementById('transferStatus');
 
-  const socket = new WebSocket('ws://localhost:8080');
+  const socket = new WebSocket('ws://localhost:8081');
 
   socket.addEventListener('message', (event) => {
     transferStatusDiv.innerHTML += `${event.data}<br>`;
@@ -113,15 +114,12 @@
       const intervalId = setInterval(() => {
         if (index < lines.length) {
           const line = lines[index].trim();
-          const xmlData = `<row><data>${line}</data></row>`;
-
-          socket.send(xmlData);
-          transferStatusDiv.innerText += `Sending: ${xmlData}\n[tx] xml\n[rx] response code\n`;
-
+          socket.send(line);
+          transferStatusDiv.innerText += `Sending: ${line}\n[tx] csv\n[rx] response code\n`;
           index++;
         } else {
           clearInterval(intervalId);
-          socket.send("End Of CSV Files");
+          socket.send("End Of CSV");
           transferStatusDiv.innerHTML += `<strong>End Of CSV Files</strong><br>`;
         }
 
@@ -132,5 +130,6 @@
     reader.readAsText(file);
   });
 </script>
+
 </body>
 </html>

@@ -11,31 +11,35 @@ import java.io.IOException;
 
 public class SocketHandler extends TextWebSocketHandler {
     private final SimpMessagingTemplate messagingTemplate;
-    private final String filePath = "received_data.csv";
+    private static final String FILE_PATH = "received_data.csv";
 
     public SocketHandler(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
     @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         String receivedData = message.getPayload();
-        System.out.println("Received CSV row: " + receivedData);
-        saveDataToFile(receivedData);
+        logAndSaveData(receivedData);
+
         if ("End of CSV".equals(receivedData)) {
-            session.sendMessage(new TextMessage("All rows received successfully"));
+            sendMessage(session, "All rows received successfully");
         } else {
-            messagingTemplate.convertAndSend("/topic/updates", "Processed: " + receivedData);
-            session.sendMessage(new TextMessage("Processed: " + receivedData));
+            sendMessage(session, "Processed: " + receivedData);
         }
     }
 
-    private void saveDataToFile(String data) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
+    private void logAndSaveData(String data) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
             writer.write(data);
             writer.newLine();
         } catch (IOException e) {
             System.err.println("Error writing to file: " + e.getMessage());
         }
+    }
+
+    private void sendMessage(WebSocketSession session, String message) throws IOException {
+        session.sendMessage(new TextMessage(message));
+        messagingTemplate.convertAndSend("/topic/updates", message);
     }
 }

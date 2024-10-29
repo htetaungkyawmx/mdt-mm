@@ -1,6 +1,8 @@
 package org.marine.mdtmm.websocket;
 
-import jakarta.websocket.*;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.OnOpen;
+import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 
 import java.io.IOException;
@@ -18,10 +20,9 @@ public class CSVProcessingWebSocket {
 
     @OnMessage
     public void onMessage(String message) {
-        List<String> lines = readCsvFile(message);
+        List<String> lines = List.of("Sample line 1", "Sample line 2");
         for (int i = 0; i < lines.size(); i++) {
-            String logMessage = "Line " + (i + 1) + ", count " + (i + 1) + " processed successfully";
-            sendMessage(logMessage);
+            sendMessage("Line " + (i + 1) + ", processed successfully");
         }
     }
 
@@ -31,19 +32,5 @@ public class CSVProcessingWebSocket {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    @OnClose
-    public void onClose(Session session) {
-
-    }
-
-    @OnError
-    public void onError(Session session, Throwable throwable) {
-
-    }
-
-    private List<String> readCsvFile(String filePath) {
-        return List.of("Sample line 1", "Sample line 2");
     }
 }
